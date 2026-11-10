@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مصروفي</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101820;color:#fff;font-family:Arial;padding:18px}
+h1{color:#55d6a0}
+.card{background:#1d2b36;padding:16px;border-radius:14px;margin:12px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,select,button{width:100%;padding:13px;border-radius:9px;border:0;margin:6px 0;font-size:15px}
+input,select{background:#293b49;color:white}
+button{background:#24a879;color:white;font-weight:bold}
+.small{color:#aab9c4;font-size:13px}
+.amount{font-size:23px;color:#55d6a0;font-weight:bold}
+.item{background:#293b49;padding:12px;border-radius:9px;margin:8px 0}
+.del{background:#a83d48}
+</style>
+</head>
+<body>
+<h1>💰 مصروفي</h1>
+<p class="small">إدارة أموالك ومديونياتك بالجنيه المصري</p>
+
+<div class="grid">
+<div class="card">أرصدة الفيز<div class="amount" id="balances">0</div></div>
+<div class="card">المديونيات<div class="amount" id="debts">0</div></div>
+<div class="card">البنود المطلوبة<div class="amount" id="expenses">0</div></div>
+<div class="card">الأقساط<div class="amount" id="installments">0</div></div>
+</div>
+
+<div class="card">
+<h3>إضافة بيانات جديدة</h3>
+<input id="name" placeholder="اسم الفيزا أو البند أو القسط">
+<select id="type">
+<option value="balance">رصيد فيزا</option>
+<option value="debt">مديونية فيزا</option>
+<option value="expense">بند مطلوب</option>
+<option value="installment">قسط</option>
+</select>
+<input id="amount" type="number" placeholder="المبلغ بالجنيه">
+<input id="date" type="date">
+<button onclick="add()">حفظ البيانات</button>
+</div>
+
+<div class="card">
+<h3>حساب خطة السداد</h3>
+<input id="money" type="number" placeholder="المبلغ المتاح معاك">
+<button onclick="calculate()">احسب المبلغ المطلوب</button>
+<div id="result"></div>
+</div>
+
+<div class="card">
+<h3>سجل حساباتك</h3>
+<div id="records"></div>
+</div>
+
+<script>
+let data=JSON.parse(localStorage.getItem("masrofy")||"[]");
+const fmt=n=>Number(n).toLocaleString("ar-EG")+" ج.م";
+function save(){
+localStorage.setItem("masrofy",JSON.stringify(data));
+render();
+}
+function add(){
+let name=document.getElementById("name").value.trim();
+let amount=Number(document.getElementById("amount").value);
+let type=document.getElementById("type").value;
+let date=document.getElementById("date").value;
+if(!name||amount<=0){alert("اكتب الاسم والمبلغ");return;}
+data.push({id:Date.now(),name,amount,type,date});
+document.getElementById("name").value="";
+document.getElementById("amount").value="";
+save();
+}
+function render(){
+let sum=t=>data.filter(x=>x.type===t).reduce((a,b)=>a+b.amount,0);
+balances.textContent=fmt(sum("balance"));
+debts.textContent=fmt(sum("debt"));
+expenses.textContent=fmt(sum("expense"));
+installments.textContent=fmt(sum("installment"));
+records.innerHTML=data.map(x=>`
+<div class="item">
+<b>${x.name}</b>
+<div>${fmt(x.amount)}</div>
+<div class="small">${x.date||"بدون تاريخ"}</div>
+<button class="del" onclick="removeItem(${x.id})">حذف</button>
+</div>`).join("")||"لا توجد بيانات حتى الآن";
+}
+function removeItem(id){
+if(confirm("هل تريد حذف هذا السجل؟")){
+data=data.filter(x=>x.id!==id);save();
+}
+}
+function calculate(){
+let money=Number(document.getElementById("money").value)||0;
+let sum=t=>data.filter(x=>x.type===t).reduce((a,b)=>a+b.amount,0);
+let required=sum("debt")+sum("expense")+sum("installment");
+let remain=required-money;
+document.getElementById("result").innerHTML=
+`<h3>إجمالي المطلوب: ${fmt(required)}</h3>
+<h3>المبلغ المتاح: ${fmt(money)}</h3>
+<h3 style="color:#55d6a0">${remain>0?"تحتاج إلى: "+fmt(remain):"المتبقي معاك: "+fmt(-remain)}</h3>`;
+}
+render();
+</script>
+</body>
+</html>
